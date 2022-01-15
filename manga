@@ -1,0 +1,132 @@
+#!/bin/bash
+
+PAGE=1
+FZF="fzf --no-preview --header-first --layout=reverse"
+ROFI="rofi -dmenu -theme gruvbox-dark -i -matching fuzzy"
+
+scrape (){
+  
+  TMP="/tmp/manga.txt"
+
+  TMP_MANGALINKS="/tmp/mangalinks.txt"
+
+  TMP_MANGATITLES="/tmp/mangatitles.txt"
+
+  TMP_MANGA_CHAPTERS="/tmp/mangachapter.txt"
+  
+  REMOVAL="rm $TMP $TMP_MANGALINKS $TMP_MANGATITLES $TMP_MANGA_CHAPTERS"
+
+  S_QUERY="$(echo "$query" | sed 's/[[:space:]]/+/g')"
+  
+  URL="https://mangabuddy.com"
+  
+  SEARCH_URL="search?q="
+  
+  curl -s "$URL/$SEARCH_URL$S_QUERY&page=$PAGE" \
+  -H 'cache-control: max-age=0' \
+  -H 'upgrade-insecure-requests: 1' \
+  -H 'user-agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/97.0.4692.71 Safari/537.36' \
+  -H 'accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9' \
+  -H 'referer: https://mangabuddy.com/' \
+  -H 'accept-language: en-US,en;q=0.9' \
+  --compressed -o $TMP
+
+   LINKS="$(sed -e '1,/<div class="section-body/d' $TMP | sed '/<script>/{s/\(.*<script>\).*/\1/;q}' | grep -o '<div class="thumb.*' | sed -n 's/.*href="\([^"]*\).*/\1/p' > $TMP_MANGALINKS )"
+
+   TOTAL_LINKS="$( wc -l $TMP_MANGALINKS | awk '{print $1}' )"
+  
+   TITLES="$( sed -e '1,/<div class="section-body/d' $TMP | sed '/<script>/{s/\(.*<script>\).*/\1/;q}' | grep -o '<div class="thumb.*' | sed -n 's/.*title="\([^"]*\).*/\1/p' | cat -n | sed 's/^[ \t]*//g' | sed 's/[[:space:]]/ /g' > $TMP_MANGATITLES )"
+
+   SHOW_TITLES="$(cat $TMP_MANGATITLES)"
+
+   [[ -z "$SHOW_TITLES" ]] && echo "No Result Found! Or the Server is Down! Try Again Later!" && $REMOVAL > /dev/null 2>&1 && exit 0
+
+   [[ "$(echo "$MENU" | awk '{print $1}')" = "rofi" ]] && MENU="$ROFI -p Manga($PAGE/$TOTAL_LINKS)"
+
+   MANGA_TITLE="$( echo -e "$SHOW_TITLES\n0 Go to Next Page($PAGE/$TOTAL_LINKS)"| $MENU )"
+
+   MANGA_SEL="$( echo -e "$MANGA_TITLE"  | awk '{print $1}')"
+
+   [[ -z "$MANGA_SEL" ]] && $REMOVAL > /dev/null 2>&1 && exit
+
+   MANGA_SEL_LINK="$( head -n$MANGA_SEL $TMP_MANGALINKS | tail -n1  )" 
+   
+   [[ "$MANGA_SEL" = 0 ]] && PAGE="$(($PAGE+1))" && scrape
+
+  curl -s "$URL/api/manga$MANGA_SEL_LINK/chapters?source=detail" \
+  -H 'cache-control: max-age=0' \
+  -H 'upgrade-insecure-requests: 1' \
+  -H 'user-agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/97.0.4692.71 Safari/537.36' \
+  -H 'accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9' \
+  -H 'referer: https://mangabuddy.com/' \
+  -H 'accept-language: en-US,en;q=0.9' \
+  --compressed -o $TMP
+  
+  CHAPTER_LIST="$(grep '<ul class="chapter-list' $TMP | grep -Po '(?<=title=")[^"]*' > $TMP_MANGA_CHAPTERS)"
+  CHAPTER_LINK="$(grep '<ul class="chapter-list' $TMP | grep -Po '(?<=href=")[^"]*' )"
+
+  SEL_CHAPTER_LIST="$(cat -n "$TMP_MANGA_CHAPTERS" | sed 's/    //g' | $MENU )"
+
+  [[ -z "$SEL_CHAPTER_LIST" ]] && $REMOVAL > /dev/null 2>&1 && exit 
+
+  SELECTED_CHAPTER_LIST="$(echo -e "$SEL_CHAPTER_LIST" | awk '{print $1}' )"
+
+  CHAPTER_URL="$(echo -e "$CHAPTER_LINK" | head -n$SELECTED_CHAPTER_LIST | tail -n1)"
+
+  curl -s "$URL$CHAPTER_URL" \
+  -H 'cache-control: max-age=0' \
+  -H 'upgrade-insecure-requests: 1' \
+  -H 'user-agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/97.0.4692.71 Safari/537.36' \
+  -H 'accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9' \
+  -H 'referer: https://mangabuddy.com/' \
+  -H 'accept-language: en-US,en;q=0.9' \
+    --compressed | grep "var chapImages" | sed 's/var chapImages = //g' | sed "s/'//g" | sed 's/,/\n/g' |  sed -e 's/^[ \t]*//' > $TMP
+
+  CDN_URL="https://s1.mbcdnv1.xyz/file/img-mbuddy/manga"
+ 
+  IMG_LINK="$(cat $TMP)"
+  
+  F_TITLE="$(echo "$MANGA_TITLE" | sed -e 's/[0-9]//g' -e 's/^[[:space:]]//g' -e 's/[[:space:]]/-/g')" 
+
+  CH_DIR="$(echo "$SEL_CHAPTER_LIST" | grep -o "Chapter.*" | sed 's/[[:space:]]/-/g' )"
+
+  num=1
+  for IMG_LINK in $IMG_LINK
+  do
+    
+    mkdir -p "$HOME/Documents/Manga/$F_TITLE/$CH_DIR"
+
+    echo "Downlaoding Images For $F_TITLE $CH_DIR"
+  
+  curl "$CDN_URL/$IMG_LINK" \
+  -H 'authority: s1.mbcdnv1.xyz' \
+  -H 'user-agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/97.0.4692.71 Safari/537.36' \
+  -H 'accept: image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8' \
+  -H 'sec-gpc: 1' \
+  -H 'sec-fetch-site: cross-site' \
+  -H 'sec-fetch-mode: no-cors' \
+  -H 'sec-fetch-dest: image' \
+  -H 'referer: https://mangabuddy.com/' \
+  -H 'accept-language: en-US,en;q=0.9' \
+  -H 'dnt: 1' \
+  --compressed --output "$HOME/Documents/Manga/$F_TITLE/$CH_DIR/$num.jpg"
+  
+  num="$(($num+1))"
+  
+done
+
+PROMPTO="$(echo -e "1 Open : Yes \n2 Open : No" | $MENU | awk '{print $1}')"
+
+[[ "$PROMPTO" = 1 ]] && feh -F -d --start-at "$HOME/Documents/Manga/$F_TITLE/$CH_DIR/1.jpg"  $HOME/Documents/Manga/$F_TITLE/$CH_DIR/** 
+
+$REMOVAL > /dev/null 2>&1
+
+exit
+
+}
+
+[[ -z "$@" ]] && read -r -p 'Search : ' query && MENU="$FZF" scrape || \
+  [[ "$1" = "--rofi" ]] && query="$(rofi -dmenu -theme dmenu -p 'Search ')" && MENU="$ROFI" && scrape || \
+  query="$@" && MENU="$FZF" && scrape 
+
+
