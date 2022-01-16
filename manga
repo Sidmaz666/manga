@@ -1,11 +1,12 @@
 #!/bin/bash
 
+
 PAGE=1
-FZF="fzf --no-preview --header-first --layout=reverse"
+FZF="fzf --cycle --no-info --layout=reverse"
 ROFI="rofi -dmenu -theme gruvbox-dark -i -matching fuzzy"
 
 scrape (){
-  
+
   TMP="/tmp/manga.txt"
 
   TMP_MANGALINKS="/tmp/mangalinks.txt"
@@ -13,8 +14,13 @@ scrape (){
   TMP_MANGATITLES="/tmp/mangatitles.txt"
 
   TMP_MANGA_CHAPTERS="/tmp/mangachapter.txt"
+
+#  POSTER_LINK_P="/tmp/posters.txt"
   
-  REMOVAL="rm $TMP $TMP_MANGALINKS $TMP_MANGATITLES $TMP_MANGA_CHAPTERS"
+#  POSTER_DIR="/tmp/posters"
+
+#  REMOVAL="rm -Rf $TMP $TMP_MANGALINKS $TMP_MANGATITLES $TMP_MANGA_CHAPTERS $POSTER_DIR $POSTER_LINK_P"
+   REMOVAL="rm $TMP $TMP_MANGALINKS $TMP_MANGATITLES $TMP_MANGA_CHAPTERS"
 
   S_QUERY="$(echo "$query" | sed 's/[[:space:]]/+/g')"
   
@@ -33,21 +39,48 @@ scrape (){
 
    LINKS="$(sed -e '1,/<div class="section-body/d' $TMP | sed '/<script>/{s/\(.*<script>\).*/\1/;q}' | grep -o '<div class="thumb.*' | sed -n 's/.*href="\([^"]*\).*/\1/p' > $TMP_MANGALINKS )"
 
+
+#   POSTER_LINKS="$(sed -e '1,/<div class="section-body/d' $TMP | sed '/<script>/{s/\(.*<script>\).*/\1/;q}' | grep -o '<div class="thumb.*' | sed -n 's/.*src="\([^"]*\).*/\1/p' > $POSTER_LINK_P)"
+
+
+#    G_POSTER_LINK="$(cat $POSTER_LINK_P)"
+#
+#    ONKO=1
+#
+#    for G_POSTER_LINK in $G_POSTER_LINK
+#	do
+#
+#       mkdir -p $POSTER_DIR
+#      
+#       curl -s $G_POSTER_LINK \
+#       -H 'referer:https://mangabuddy.com/' --compressed -o "$POSTER_DIR/$ONKO.png"
+#       ONKO=$(($ONKO+1))
+#	
+#      done
+
+
+
    TOTAL_LINKS="$( wc -l $TMP_MANGALINKS | awk '{print $1}' )"
   
    TITLES="$( sed -e '1,/<div class="section-body/d' $TMP | sed '/<script>/{s/\(.*<script>\).*/\1/;q}' | grep -o '<div class="thumb.*' | sed -n 's/.*title="\([^"]*\).*/\1/p' | cat -n | sed 's/^[ \t]*//g' | sed 's/[[:space:]]/ /g' > $TMP_MANGATITLES )"
 
    SHOW_TITLES="$(cat $TMP_MANGATITLES)"
 
+   [[ "$(echo "$MENU" | awk '{print $1}')" = "rofi" ]] && [[ -z "$SHOW_TITLES" ]] && notify-send "Manga" "No Result Found! Or the Server is Down! Try Again Later!"
    [[ -z "$SHOW_TITLES" ]] && echo "No Result Found! Or the Server is Down! Try Again Later!" && $REMOVAL > /dev/null 2>&1 && exit 0
+     
 
    [[ "$(echo "$MENU" | awk '{print $1}')" = "rofi" ]] && MENU="$ROFI -p Manga($PAGE/$TOTAL_LINKS)"
+
+   [[ "$(echo "$MENU" | awk '{print $1}')" = "fzf" ]] && MENU="$FZF --header=Manga($PAGE/$TOTAL_LINKS) --header-first --no-preview"
 
    MANGA_TITLE="$( echo -e "$SHOW_TITLES\n0 Go to Next Page($PAGE/$TOTAL_LINKS)"| $MENU )"
 
    MANGA_SEL="$( echo -e "$MANGA_TITLE"  | awk '{print $1}')"
 
    [[ -z "$MANGA_SEL" ]] && $REMOVAL > /dev/null 2>&1 && exit
+   [[ -z "$MANGA_SEL" ]] && exit
+   
 
    MANGA_SEL_LINK="$( head -n$MANGA_SEL $TMP_MANGALINKS | tail -n1  )" 
    
@@ -63,6 +96,15 @@ scrape (){
   --compressed -o $TMP
   
   CHAPTER_LIST="$(grep '<ul class="chapter-list' $TMP | grep -Po '(?<=title=")[^"]*' > $TMP_MANGA_CHAPTERS)"
+
+  F_TITLE="$(echo "$MANGA_TITLE" | sed -e 's/[0-9]//g' -e 's/^[[:space:]]//g' -e 's/[[:space:]]/-/g')" 
+
+  TOTAL_CHP="$(wc -l $TMP_MANGA_CHAPTERS | awk '{print $1}')"
+
+   [[ "$(echo "$MENU" | awk '{print $1}')" = "rofi" ]] && MENU="" && MENU="$ROFI -p Manga($F_TITLE/$TOTAL_CHP)"
+
+   [[ "$(echo "$MENU" | awk '{print $1}')" = "fzf" ]] && MENU="$FZF --header=Manga($F_TITLE/$TOTAL_CHP) --no-preview --header-first"
+
   CHAPTER_LINK="$(grep '<ul class="chapter-list' $TMP | grep -Po '(?<=href=")[^"]*' )"
 
   SEL_CHAPTER_LIST="$(cat -n "$TMP_MANGA_CHAPTERS" | sed 's/    //g' | $MENU )"
@@ -86,8 +128,6 @@ scrape (){
  
   IMG_LINK="$(cat $TMP)"
   
-  F_TITLE="$(echo "$MANGA_TITLE" | sed -e 's/[0-9]//g' -e 's/^[[:space:]]//g' -e 's/[[:space:]]/-/g')" 
-
   CH_DIR="$(echo "$SEL_CHAPTER_LIST" | grep -o "Chapter.*" | sed 's/[[:space:]]/-/g' )"
 
   num=1
@@ -128,5 +168,4 @@ exit
 [[ -z "$@" ]] && read -r -p 'Search : ' query && MENU="$FZF" scrape || \
   [[ "$1" = "--rofi" ]] && query="$(rofi -dmenu -theme dmenu -p 'Search ')" && MENU="$ROFI" && scrape || \
   query="$@" && MENU="$FZF" && scrape 
-
 
