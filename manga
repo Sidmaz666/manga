@@ -60,9 +60,9 @@ scrape (){
 
    [[ "$MANGA_SEL" = -1 ]] && PAGE="$(($PAGE-1))" && scrape
 
-   [[ "$MANGA_SEL" = -2 ]] && [[ "$(echo "$MENU" | awk '{print $1}')" = "fzf" ]] && read -r -p "Search : " query && scrape 
+   [[ "$MANGA_SEL" = -2 ]] && [[ "$(echo "$MENU" | awk '{print $1}')" = "fzf" ]] && PAGE=1 && read -r -p "Search : " query && scrape 
    
-   [[ "$MANGA_SEL" = -2 ]] && [[ "$(echo "$MENU" | awk '{print $1}')" = "rofi" ]] && query="$(rofi -dmenu -theme dmenu -p 'Search ')" && scrape 
+   [[ "$MANGA_SEL" = -2 ]] && [[ "$(echo "$MENU" | awk '{print $1}')" = "rofi" ]] && PAGE=1 && query="$(rofi -dmenu -theme dmenu -p 'Search ')" && scrape 
 
    [[ -z "$MANGA_SEL" ]] && $REMOVAL > /dev/null 2>&1 && exit
    [[ -z "$MANGA_SEL" ]] && exit
