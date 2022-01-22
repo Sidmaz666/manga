@@ -15,12 +15,7 @@ scrape (){
 
   TMP_MANGA_CHAPTERS="/tmp/mangachapter.txt"
 
-#  POSTER_LINK_P="/tmp/posters.txt"
-  
-#  POSTER_DIR="/tmp/posters"
-
-#  REMOVAL="rm -Rf $TMP $TMP_MANGALINKS $TMP_MANGATITLES $TMP_MANGA_CHAPTERS $POSTER_DIR $POSTER_LINK_P"
-   REMOVAL="rm $TMP $TMP_MANGALINKS $TMP_MANGATITLES $TMP_MANGA_CHAPTERS"
+  REMOVAL="rm $TMP $TMP_MANGALINKS $TMP_MANGATITLES $TMP_MANGA_CHAPTERS"
 
   S_QUERY="$(echo "$query" | sed 's/[[:space:]]/+/g')"
   
@@ -46,7 +41,7 @@ scrape (){
 
    SHOW_TITLES="$(cat $TMP_MANGATITLES)"
 
-   [[ "$(echo "$MENU" | awk '{print $1}')" = "rofi" ]] && [[ -z "$SHOW_TITLES" ]] && notify-send "Manga" "No Result Found! Or the Server is Down! Try Again Later!"
+   [[ "$(echo "$MENU" | awk '{print $1}')" = "rofi" ]] && [[ -z "$SHOW_TITLES" ]] && notify-send "Manga" "No Result Found! Or the Server is Down! Try Again Later!" -t 1500
    [[ -z "$SHOW_TITLES" ]] && echo "No Result Found! Or the Server is Down! Try Again Later!" && $REMOVAL > /dev/null 2>&1 && exit 0
      
 
@@ -57,13 +52,17 @@ scrape (){
   [[ "$PAGE" > 1 ]] && PRV_PG="\n-1 Previous Page" || PRV_PG=""
 
 
-   MANGA_TITLE="$( echo -e "$SHOW_TITLES\n0 Next Page($PAGE/$TOTAL_LINKS)$PRV_PG"| $MENU )"
+   MANGA_TITLE="$( echo -e "$SHOW_TITLES\n-2 Search Again\n0 Next Page($PAGE/$TOTAL_LINKS)$PRV_PG"| $MENU )"
 
    MANGA_SEL="$( echo -e "$MANGA_TITLE"  | awk '{print $1}')"
 
    [[ "$MANGA_SEL" = 0 ]] && PAGE="$(($PAGE+1))" && scrape
 
    [[ "$MANGA_SEL" = -1 ]] && PAGE="$(($PAGE-1))" && scrape
+
+   [[ "$MANGA_SEL" = -2 ]] && [[ "$(echo "$MENU" | awk '{print $1}')" = "fzf" ]] && read -r -p "Search : " query && scrape 
+   
+   [[ "$MANGA_SEL" = -2 ]] && [[ "$(echo "$MENU" | awk '{print $1}')" = "rofi" ]] && query="$(rofi -dmenu -theme dmenu -p 'Search ')" && scrape 
 
    [[ -z "$MANGA_SEL" ]] && $REMOVAL > /dev/null 2>&1 && exit
    [[ -z "$MANGA_SEL" ]] && exit
@@ -154,4 +153,3 @@ exit
 [[ -z "$@" ]] && read -r -p 'Search : ' query && MENU="$FZF" scrape || \
   [[ "$1" = "--rofi" ]] && query="$(rofi -dmenu -theme dmenu -p 'Search ')" && MENU="$ROFI" && scrape || \
   query="$@" && MENU="$FZF" && scrape 
-
