@@ -115,7 +115,7 @@ scrape (){
   
   CH_DIR="$(echo "$SEL_CHAPTER_LIST" | grep -o "Chapter.*" | sed 's/[[:space:]]/-/g' )"
 
-  num=1
+  num=0
   for IMG_LINK in $IMG_LINK
   do
     
@@ -125,24 +125,25 @@ scrape (){
   
   curl "$CDN_URL/$IMG_LINK" \
   -H 'authority: s1.mbcdnv1.xyz' \
-  -H 'user-agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/97.0.4692.71 Safari/537.36' \
-  -H 'accept: image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8' \
-  -H 'sec-gpc: 1' \
-  -H 'sec-fetch-site: cross-site' \
-  -H 'sec-fetch-mode: no-cors' \
-  -H 'sec-fetch-dest: image' \
-  -H 'referer: https://mangabuddy.com/' \
-  -H 'accept-language: en-US,en;q=0.9' \
-  -H 'dnt: 1' \
-  --compressed --output "$HOME/Documents/Manga/$F_TITLE/$CH_DIR/$num.jpg"
-  
+ -H 'user-agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/97.0.4692.71 Safari/537.36' \
+ -H 'accept: image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8' \
+ -H 'sec-gpc: 1' \
+ -H 'sec-fetch-site: cross-site' \
+ -H 'sec-fetch-mode: no-cors' \
+ -H 'sec-fetch-dest: image' \
+ -H 'referer: https://mangabuddy.com/' \
+ -H 'accept-language: en-US,en;q=0.9' \
+ -H 'dnt: 1' \
+ --compressed > "$HOME/Documents/Manga/$F_TITLE/$CH_DIR/$num.jpg"
+ 
   num="$(($num+1))"
   
 done
 
 PROMPTO="$(echo -e "1 Open : Yes \n2 Open : No" | $MENU | awk '{print $1}')"
 
-[[ "$PROMPTO" = 1 ]] && feh -F -d --start-at "$HOME/Documents/Manga/$F_TITLE/$CH_DIR/1.jpg"  $HOME/Documents/Manga/$F_TITLE/$CH_DIR/** 
+[[ "$PROMPTO" = 1 ]] && feh -FSname -d --start-at "$HOME/Documents/Manga/$F_TITLE/$CH_DIR/0.jpg"  $HOME/Documents/Manga/$F_TITLE/$CH_DIR/**  
+
 
 $REMOVAL > /dev/null 2>&1
 
