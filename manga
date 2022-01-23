@@ -121,7 +121,7 @@ scrape (){
     
     mkdir -p "$HOME/Documents/Manga/$F_TITLE/$CH_DIR"
 
-    echo "Downlaoding Images For $F_TITLE $CH_DIR"
+    echo "Downlaoding Images For $F_TITLE $CH_DIR [$num] "
   
   curl "$CDN_URL/$IMG_LINK" \
   -H 'authority: s1.mbcdnv1.xyz' \
