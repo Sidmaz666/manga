@@ -1,6 +1,5 @@
 #!/bin/bash
-
-
+PDF_OPEN="brave --app=file://"
 PAGE=1
 FZF="fzf --cycle --no-info --layout=reverse"
 ROFI="rofi -dmenu -theme gruvbox-dark -i -matching fuzzy"
@@ -134,22 +133,47 @@ scrape (){
  -H 'referer: https://mangabuddy.com/' \
  -H 'accept-language: en-US,en;q=0.9' \
  -H 'dnt: 1' \
- --compressed > "$HOME/Documents/Manga/$F_TITLE/$CH_DIR/P$num.jpg"
+ --compressed > "$HOME/Documents/Manga/$F_TITLE/$CH_DIR/00$num.jpg"
  
   num="$(($num+1))"
   
 done
 
-PROMPTO="$(echo -e "1 Open : Yes \n2 Open : No" | $MENU | awk '{print $1}')"
-
 ORG_PATH="$(echo "$PWD")"
+PROMPTO="$(echo -e "A Open As Images\nB Open As PDF\nC Save as CBZ\nD Exit" | $MENU | awk '{print $1}')"
 
-[[ "$PROMPTO" = 1 ]] && cd $HOME/Documents/Manga/$F_TITLE/$CH_DIR && feh -FSmtime --reverse --start-at P1.jpg -d ./  
+cd $HOME/Documents/Manga/$F_TITLE/$CH_DIR 
 
-cd $ORG_PATH
+case $PROMPTO in
+  A)
+		cd $HOME/Documents/Manga/$F_TITLE/$CH_DIR && 
+		feh -FSmtime --reverse --start-at 001.jpg -d ./
+		$REMOVAL > /dev/null 2>&1
+		cd $ORG_PATH
+				;;
+  B)
+    			
+	        cd $HOME/Documents/Manga/$F_TITLE/$CH_DIR/
+		convert $(ls | sort -n) $F_TITLE$CH_DIR.pdf
+		$PDF_OPEN$HOME/Documents/Manga/$F_TITLE/$CH_DIR/$F_TITLE$CH_DIR.pdf 
+		rm *jpg
+		cd $ORG_PATH
+		$REMOVAL > /dev/null 2>&1
+				;;
+  C)
+		cd $HOME/Documents/Manga/$F_TITLE/$CH_DIR
+		zip -q $HOME/Documents/Manga/$F_TITLE/$CH_DIR.cbz $HOME/Documents/Manga/$F_TITLE/$CH_DIR/00*.jpg
+		rm *.jpg
+		rm -Rf $HOME/Documents/Manga/$F_TITLE/$CH_DIR
+		$REMOVAL > /dev/null 2>&1
+		cd $ORG_PATH
+    ;;
+  *)
+    echo "$F_TITLE : $CH_DIR Saved in $HOME/Manga"
+    exit
+    ;;
+esac
 
-
-$REMOVAL > /dev/null 2>&1
 
 exit
 

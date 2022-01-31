@@ -11,8 +11,9 @@ A CLI Tool(BashScript) To Browse and Read/Download Manga. Scrapes From <a href="
 1. curl
 2. cat, grep, head, tail, awk, sed , wc
 3. fzf
-4. rofi (optional)
+4. rofi (optional menu)
 5. feh (Manga Reader)
+6. Imagemagick (Optional-[To convert jpgs into pdf])
 
 ## Installation
 
