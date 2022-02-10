@@ -21,14 +21,22 @@ scrape (){
   URL="https://mangabuddy.com"
   
   SEARCH_URL="search?q="
-  
-  curl -s "$URL/$SEARCH_URL$S_QUERY&page=$PAGE" \
+
+curl -s "https://mangabuddy.com/search?q=$S_QUERY&page=$PAGE" \
+  -H 'authority: mangabuddy.com' \
   -H 'cache-control: max-age=0' \
   -H 'upgrade-insecure-requests: 1' \
-  -H 'user-agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/97.0.4692.71 Safari/537.36' \
+  -H 'user-agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/98.0.4758.74 Safari/537.36' \
   -H 'accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9' \
+  -H 'sec-gpc: 1' \
+  -H 'sec-fetch-site: same-origin' \
+  -H 'sec-fetch-mode: navigate' \
+  -H 'sec-fetch-user: ?1' \
+  -H 'sec-fetch-dest: document' \
   -H 'referer: https://mangabuddy.com/' \
   -H 'accept-language: en-US,en;q=0.9' \
+  -H 'cookie: dark-mode=1; cf_clearance=8yf0kWsq3ut_tSUqTBiWFph2vzoSFAEK5tIDCq.e.4A-1644473868-0-150; cookies_accepted=1' \
+  -H 'dnt: 1' \
   --compressed -o $TMP
 
    LINKS="$(sed -e '1,/<div class="section-body/d' $TMP | sed '/<script>/{s/\(.*<script>\).*/\1/;q}' | grep -o '<div class="thumb.*' | sed -n 's/.*href="\([^"]*\).*/\1/p' > $TMP_MANGALINKS )"
